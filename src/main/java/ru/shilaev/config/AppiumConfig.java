@@ -73,6 +73,7 @@ public class AppiumConfig {
             capabilities.setCapability("appium:deviceName", deviceName);
             capabilities.setCapability("appium:automationName", automationName);
             capabilities.setCapability("appium:noReset", noReset);
+            capabilities.setCapability("appium:newCommandTimeout", 1800);
 
             return new AppiumConfig(appiumUrl, capabilities);
         }

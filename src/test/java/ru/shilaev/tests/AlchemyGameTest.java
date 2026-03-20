@@ -104,33 +104,11 @@ public class AlchemyGameTest {
 
             Assertions.assertTrue(alchemyGamePage.isAddsLoaded(), "Реклама не открылась");
 
-            boolean needRestart = false;
-            try {
-                needRestart = alchemyGamePage.closeAddButton();
-            } catch (Exception e) {
-                Logger.error("Критическая ошибка при работе с рекламой: " + e.getMessage());
-                if (e.getMessage().contains("instrumentation process is not running")) {
-                    Logger.warning("UiAutomator2 упал. Перезапускаем драйвер и приложение...");
-
-                    // Полный перезапуск драйвера
-                    driverManager.quitDriver();
-                    driverManager.createDriver(config, 3600);
-                    alchemyGamePage = new AlchemyGamePage();
-
-                    driverManager.launchApp(alchemyGamePage.getPackageName());
-                    alchemyGamePage.waitForSeconds(10);
-
-                    Logger.info("Нажатие Play после перезапуска");
-                    alchemyGamePage.playButtonClick();
-                    needRestart = false; // После перезапуска продолжаем
-                } else {
-                    needRestart = true;
-                }
-            }
-
+            boolean needRestart = alchemyGamePage.closeAddButton();
             if (needRestart) {
                 Logger.warning("Перезапуск приложения...");
                 driverManager.terminateApp(alchemyGamePage.getPackageName());
+                alchemyGamePage.waitForSeconds(15);
                 driverManager.launchApp(alchemyGamePage.getPackageName());
                 alchemyGamePage.waitForSeconds(5);
 

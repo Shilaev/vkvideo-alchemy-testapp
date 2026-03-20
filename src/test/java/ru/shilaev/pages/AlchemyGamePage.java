@@ -91,24 +91,26 @@ public class AlchemyGamePage extends BasePage {
     public boolean waitForClaimButtonAndClick() {
         Logger.step("ОЖИДАНИЕ КНОПКИ ПОЛУЧИТЬ НАГРАДУ");
 
-        int maxWaitMinutes = 10;
-        long startTime = System.currentTimeMillis();
-        long maxWaitMillis = maxWaitMinutes * 60 * 1000L;
+        int maxChecks = 24; // 24 * 5 секунд = 120 секунд = 2 минуты
 
-        Logger.info("Ожидаем появления кнопки получить награду");
+        Logger.info("Ожидаем появления кнопки получить награду (до 2 минут)");
 
-        while (System.currentTimeMillis() - startTime < maxWaitMillis) {
+        for (int i = 0; i < maxChecks; i++) {
             if (isElementPresent(REWARD_BUTTON, 2)) {
-                Logger.success("Кнопка 'Claim!' появилась! Нажимаем.");
+                Logger.success("Кнопка получить награду появилась!");
                 click(REWARD_BUTTON);
                 waitForSeconds(3);
                 return true;
             }
 
+            if (i % 6 == 0 && i > 0) { // Лог каждые 30 секунд
+                Logger.info("Ждем дальше... прошло " + (i * 5) + " сек");
+            }
+
             waitForSeconds(5);
         }
 
-        Logger.error("Кнопка получить награду не появилась.");
+        Logger.error("Кнопка получить награду не появилась за 2 минуты.");
         return false;
     }
 
