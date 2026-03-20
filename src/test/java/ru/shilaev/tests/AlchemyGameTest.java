@@ -90,36 +90,64 @@ public class AlchemyGameTest {
     public void testLootHintsForAdds() {
         Logger.step("ПОЛУЧЕНИЕ ПОДСКАЗОК ЗА РЕКЛАМУ");
 
-        Logger.info("Нажатие Play");
-        alchemyGamePage.playButtonClick();
-
-        Logger.info("Нажатие Hints");
-        alchemyGamePage.hintButtonClick();
-
-        Assertions.assertTrue(alchemyGamePage.waitForHintsToLoad(30), "Вкладка подсказок не загрузилась");
-
-        Logger.info("Нажатие Watch");
-        alchemyGamePage.watchAddsButtonClick();
-
-        Assertions.assertTrue(alchemyGamePage.isAddsLoaded(), "Реклама не открылась");
-
-        boolean needRestart = alchemyGamePage.closeAddButton();
-
-        if (needRestart) {
-            Logger.warning("Перезапуск приложения...");
-            driverManager.terminateApp(alchemyGamePage.getPackageName());
-            driverManager.launchApp(alchemyGamePage.getPackageName());
-            alchemyGamePage.waitForSeconds(5);
-
+        try {
             Logger.info("Нажатие Play");
             alchemyGamePage.playButtonClick();
+
+            Logger.info("Нажатие Hints");
+            alchemyGamePage.hintButtonClick();
+
+            Assertions.assertTrue(alchemyGamePage.waitForHintsToLoad(30), "Вкладка подсказок не загрузилась");
+
+            Logger.info("Нажатие Watch");
+            alchemyGamePage.watchAddsButtonClick();
+
+            Assertions.assertTrue(alchemyGamePage.isAddsLoaded(), "Реклама не открылась");
+
+            boolean needRestart = false;
+            try {
+                needRestart = alchemyGamePage.closeAddButton();
+            } catch (Exception e) {
+                Logger.error("Критическая ошибка при работе с рекламой: " + e.getMessage());
+                if (e.getMessage().contains("instrumentation process is not running")) {
+                    Logger.warning("UiAutomator2 упал. Перезапускаем драйвер и приложение...");
+
+                    // Полный перезапуск драйвера
+                    driverManager.quitDriver();
+                    driverManager.createDriver(config, 3600);
+                    alchemyGamePage = new AlchemyGamePage();
+
+                    driverManager.launchApp(alchemyGamePage.getPackageName());
+                    alchemyGamePage.waitForSeconds(10);
+
+                    Logger.info("Нажатие Play после перезапуска");
+                    alchemyGamePage.playButtonClick();
+                    needRestart = false; // После перезапуска продолжаем
+                } else {
+                    needRestart = true;
+                }
+            }
+
+            if (needRestart) {
+                Logger.warning("Перезапуск приложения...");
+                driverManager.terminateApp(alchemyGamePage.getPackageName());
+                driverManager.launchApp(alchemyGamePage.getPackageName());
+                alchemyGamePage.waitForSeconds(5);
+
+                Logger.info("Нажатие Play");
+                alchemyGamePage.playButtonClick();
+            }
+
+            boolean hintsReceived = alchemyGamePage.waitForHintsToBecomeFour(15);
+            Assertions.assertTrue(hintsReceived, "Не получено 4 подсказки");
+
+            int hintsCount = alchemyGamePage.getHintsCount();
+            Logger.success("Итоговое количество подсказок: " + hintsCount);
+
+        } catch (Exception e) {
+            Logger.error("Тест упал с ошибкой: " + e.getMessage());
+            throw e;
         }
-
-        boolean hintsReceived = alchemyGamePage.waitForHintsToBecomeFour(15);
-        Assertions.assertTrue(hintsReceived, "Не получено 4 подсказки");
-
-        int hintsCount = alchemyGamePage.getHintsCount();
-        Logger.success("Итоговое количество подсказок: " + hintsCount);
     }
 
     @AfterEach

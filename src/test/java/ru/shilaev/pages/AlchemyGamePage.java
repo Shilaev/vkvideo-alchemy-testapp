@@ -25,6 +25,7 @@ public class AlchemyGamePage extends BasePage {
     public static final By ADDS_IMAGE_VIEW = By.id("com.ilyin.alchemy:id/inter_native_ad_view");
     public static final By ADDS_COUNTDOWN_TIMER = By.id("com.ilyin.alchemy:id/inter_text_countdown");
     public static final By CLOSE_ADD_BUTTON = By.id("com.ilyin.alchemy:id/bigo_ad_btn_close");
+    public static final By REWARD_BUTTON = By.xpath("//android.widget.TextView[@text='Claim!' or @text='Забрать' or @text='Получить' or @text='Get' or @text='Take' or contains(@text, 'claim') or contains(@text, 'получ')]");
     //endregion
 
     //region utils methods
@@ -85,14 +86,58 @@ public class AlchemyGamePage extends BasePage {
     }
 
     /**
+     * Ожидание появления кнопки Claim! (до 10 минут)
+     *
+     * @return true если кнопка появилась и нажата, false если нет
+     */
+    public boolean waitForClaimButtonAndClick() {
+        Logger.step("ОЖИДАНИЕ КНОПКИ ПОЛУЧИТЬ НАГРАДУ");
+
+        int maxWaitMinutes = 10;
+        long startTime = System.currentTimeMillis();
+        long maxWaitMillis = maxWaitMinutes * 60 * 1000L;
+
+        Logger.info("Ожидаем появления кнопки получить награду");
+
+        while (System.currentTimeMillis() - startTime < maxWaitMillis) {
+            if (isElementPresent(REWARD_BUTTON, 2)) {
+                Logger.success("Кнопка 'Claim!' появилась! Нажимаем.");
+                click(REWARD_BUTTON);
+                waitForSeconds(3);
+                return true;
+            }
+
+            waitForSeconds(5);
+        }
+
+        Logger.error("Кнопка получить награду не появилась.");
+        return false;
+    }
+
+    /**
      * Нажимаем на кнопку закрыть рекламу
      */
     public boolean closeAddButton() {
-        Logger.step("ЗАКРЫТИЕ РЕКЛАМЫ");
+        Logger.step("ЗАКРЫТИЕ РЕКЛАМЫ / ОЖИДАНИЕ НАГРАДЫ");
 
         try {
+            // Проверяем особый случай: реклама с текстом (ADDS_TEXT_VIEW)
+            if (safeIsElementPresent(ADDS_TEXT_VIEW, 3)) {
+                Logger.warning("Обнаружена реклама с текстовыми кнопками (ADDS_TEXT_VIEW). Ждем 2 минуты...");
+                waitForSeconds(120); // Ждем 2 минуты
+                Logger.info("2 минуты прошли, проверяем счетчик подсказок");
+
+                if (safeIsElementPresent(HINTS_COUNTER_TEXT, 5)) {
+                    Logger.success("Счетчик подсказок появился после ожидания!");
+                    return false;
+                } else {
+                    Logger.warning("Счетчик не появился, потребуется перезапуск");
+                    return true;
+                }
+            }
+
             // Если есть кнопка закрытия
-            if (isElementPresent(CLOSE_ADD_BUTTON, 5)) {
+            else if (safeIsElementPresent(CLOSE_ADD_BUTTON, 5)) {
                 Logger.info("Обнаружена кнопка закрытия рекламы");
 
                 int attempts = 0;
@@ -101,12 +146,12 @@ public class AlchemyGamePage extends BasePage {
 
                     if (clickIfPresent(CLOSE_ADD_BUTTON)) {
                         Logger.info("Кнопка нажата, ожидаем исчезновения рекламы...");
-                        waitForElementToDisappear(ADDS_IMAGE_VIEW, 10);
+                        safeWaitForElementToDisappear(ADDS_IMAGE_VIEW, 10);
                         waitForSeconds(2);
                     }
 
                     // Проверяем появление счетчика подсказок
-                    if (isElementPresent(HINTS_COUNTER_TEXT, 3)) {
+                    if (safeIsElementPresent(HINTS_COUNTER_TEXT, 3)) {
                         Logger.success("Счетчик подсказок появился! Реклама закрыта");
                         return false;
                     }
@@ -118,28 +163,73 @@ public class AlchemyGamePage extends BasePage {
                 return true;
             }
 
-            // Если нет кнопки закрытия, возможно реклама с таймером
-            else if (isElementPresent(ADDS_IMAGE_VIEW) || isElementPresent(ADDS_TEXT_VIEW)) {
+            // Если есть реклама без кнопки закрытия
+            else if (safeIsElementPresent(ADDS_IMAGE_VIEW, 5)) {
                 Logger.info("Реклама без кнопки закрытия, ожидаем окончания...");
 
-                boolean disappeared = waitForElementToDisappear(ADDS_IMAGE_VIEW, 60);
+                boolean disappeared = safeWaitForElementToDisappear(ADDS_IMAGE_VIEW, 60);
 
                 if (disappeared) {
                     waitForSeconds(3);
 
-                    if (isElementPresent(HINTS_COUNTER_TEXT, 5)) {
+                    // Проверяем счетчик
+                    if (safeIsElementPresent(HINTS_COUNTER_TEXT, 5)) {
                         Logger.success("Реклама закончилась, счетчик подсказок появился");
                         return false;
                     }
                 }
+
+                Logger.info("Счетчик не появился, пробуем ждать кнопку получения награды (до 10 минут)");
+                return !waitForClaimButtonAndClick();
+            }
+
+            // Если ничего не нашли, просто ждем кнопку получения награды
+            else {
+                Logger.info("Ни рекламы, ни кнопки закрытия не найдено. Ждем кнопку получения награды (до 10 минут)");
+                return !waitForClaimButtonAndClick();
             }
 
         } catch (Exception e) {
             Logger.error("Ошибка при закрытии рекламы: " + e.getMessage());
+            if (e.getMessage().contains("instrumentation process is not running")) {
+                Logger.warning("Обнаружен сбой UiAutomator2, потребуется перезапуск");
+                return true;
+            }
         }
 
         Logger.warning("Не удалось штатно закрыть рекламу");
         return true;
+    }
+
+    /**
+     * Безопасная проверка наличия элемента с обработкой ошибок сессии
+     */
+    private boolean safeIsElementPresent(By locator, int timeoutSeconds) {
+        try {
+            return isElementPresent(locator, timeoutSeconds);
+        } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("instrumentation process is not running")) {
+                Logger.error("Сессия UiAutomator2 потеряна при проверке элемента");
+                throw e; // Пробрасываем дальше для обработки в тесте
+            }
+            Logger.debug("Элемент не найден (ожидаемо): " + locator);
+            return false;
+        }
+    }
+
+    /**
+     * Безопасное ожидание исчезновения элемента
+     */
+    private boolean safeWaitForElementToDisappear(By locator, int timeoutSeconds) {
+        try {
+            return waitForElementToDisappear(locator, timeoutSeconds);
+        } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("instrumentation process is not running")) {
+                Logger.error("Сессия UiAutomator2 потеряна при ожидании исчезновения");
+                throw e;
+            }
+            return false;
+        }
     }
 
     /**
