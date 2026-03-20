@@ -80,7 +80,7 @@ public class AlchemyGamePage extends BasePage {
             Logger.success("Вкладка подсказок загружена");
             return true;
         } catch (Exception e) {
-            Logger.error("Вкладка подсказок не загрузилась за " + timeoutSeconds + " сек");
+            Logger.error("Вкладка подсказок не загрузилась");
             return false;
         }
     }
