@@ -108,7 +108,7 @@ public class AlchemyGameTest {
             if (needRestart) {
                 Logger.warning("Перезапуск приложения...");
                 driverManager.terminateApp(alchemyGamePage.getPackageName());
-                alchemyGamePage.waitForSeconds(15);
+                alchemyGamePage.waitForSeconds(5);
                 driverManager.launchApp(alchemyGamePage.getPackageName());
                 alchemyGamePage.waitForSeconds(5);
 

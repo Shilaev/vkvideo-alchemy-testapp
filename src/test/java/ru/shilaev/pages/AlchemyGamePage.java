@@ -25,6 +25,7 @@ public class AlchemyGamePage extends BasePage {
     public static final By ADDS_IMAGE_VIEW = By.id("com.ilyin.alchemy:id/inter_native_ad_view");
     public static final By ADDS_COUNTDOWN_TIMER = By.id("com.ilyin.alchemy:id/inter_text_countdown");
     public static final By CLOSE_ADD_BUTTON = By.id("com.ilyin.alchemy:id/bigo_ad_btn_close");
+    public static final By GOOGLE_PLAY_CLOSE_BUTTON = By.xpath("//androidx.compose.ui.platform.ComposeView[@resource-id=\"com.android.vending:id/0_resource_name_obfuscated\"]/android.view.View/android.view.View[1]/android.view.View/android.view.View[2]/android.view.View/android.view.View/android.view.View[2]/android.view.View/android.view.View[2]/android.view.View");
     public static final By REWARD_BUTTON = By.xpath("//android.widget.TextView[@text='Claim!' or @text='Забрать' or @text='Получить' or @text='Get' or @text='Take' or contains(@text, 'claim') or contains(@text, 'получ')]");
     //endregion
 
@@ -132,16 +133,24 @@ public class AlchemyGamePage extends BasePage {
                 }
             }
 
-            // Если есть кнопка закрытия
-            if (safeIsElementPresent(CLOSE_ADD_BUTTON, 5)) {
-                Logger.info("Обнаружена кнопка закрытия рекламы");
+            // Если есть первая кнопка закрытия
+            else if (safeIsElementPresent(CLOSE_ADD_BUTTON, 5)) {
+                Logger.info("Обнаружена первая кнопка закрытия рекламы");
 
                 int attempts = 0;
                 while (attempts < 20) {
                     attempts++;
 
                     if (clickIfPresent(CLOSE_ADD_BUTTON)) {
-                        Logger.info("Кнопка нажата, ожидаем исчезновения рекламы...");
+                        Logger.info("Первая кнопка нажата, ожидаем появления второй...");
+
+                        // Ждем появления второй кнопки
+                        if (safeIsElementPresent(GOOGLE_PLAY_CLOSE_BUTTON, 30)) {
+                            Logger.info("Вторая кнопка появилась, нажимаем");
+                            clickIfPresent(GOOGLE_PLAY_CLOSE_BUTTON);
+                        }
+
+                        Logger.info("Ожидаем исчезновения рекламы...");
                         safeWaitForElementToDisappear(ADDS_IMAGE_VIEW, 10);
                         waitForSeconds(2);
                     }
@@ -151,6 +160,8 @@ public class AlchemyGamePage extends BasePage {
                         Logger.success("Счетчик подсказок появился! Реклама закрыта");
                         return false;
                     }
+
+                    Logger.info("Попытка #" + attempts + ": счетчик еще не появился");
                 }
 
                 Logger.error("Счетчик подсказок не появился после 20 попыток");
@@ -161,7 +172,7 @@ public class AlchemyGamePage extends BasePage {
             else if (safeIsElementPresent(ADDS_IMAGE_VIEW, 5)) {
                 Logger.info("Реклама без кнопки закрытия, ожидаем окончания...");
 
-                boolean disappeared = safeWaitForElementToDisappear(ADDS_IMAGE_VIEW, 60);
+                boolean disappeared = safeWaitForElementToDisappear(ADDS_IMAGE_VIEW, 110);
 
                 if (disappeared) {
                     waitForSeconds(3);
