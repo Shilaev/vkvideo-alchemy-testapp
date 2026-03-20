@@ -62,11 +62,7 @@ public class AlchemyGamePage extends BasePage {
      * Нажатие на кнопку Watch Adds
      */
     public void watchAddsButtonClick() {
-        if (waitForHintsToLoad(10)) {
             click(WATCH_ADDS_BUTTON);
-        } else {
-            Logger.error("Не удалось дождаться загрузки подсказок");
-        }
     }
 
     /**
