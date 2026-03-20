@@ -86,9 +86,7 @@ public class AlchemyGamePage extends BasePage {
     }
 
     /**
-     * Ожидание появления кнопки Claim! (до 10 минут)
-     *
-     * @return true если кнопка появилась и нажата, false если нет
+     * Ожидание появления кнопки получения награды
      */
     public boolean waitForClaimButtonAndClick() {
         Logger.step("ОЖИДАНИЕ КНОПКИ ПОЛУЧИТЬ НАГРАДУ");
@@ -137,7 +135,7 @@ public class AlchemyGamePage extends BasePage {
             }
 
             // Если есть кнопка закрытия
-            else if (safeIsElementPresent(CLOSE_ADD_BUTTON, 5)) {
+            if (safeIsElementPresent(CLOSE_ADD_BUTTON, 5)) {
                 Logger.info("Обнаружена кнопка закрытия рекламы");
 
                 int attempts = 0;
@@ -155,8 +153,6 @@ public class AlchemyGamePage extends BasePage {
                         Logger.success("Счетчик подсказок появился! Реклама закрыта");
                         return false;
                     }
-
-                    Logger.info("Попытка #" + attempts + ": счетчик еще не появился");
                 }
 
                 Logger.error("Счетчик подсказок не появился после 20 попыток");
@@ -179,13 +175,13 @@ public class AlchemyGamePage extends BasePage {
                     }
                 }
 
-                Logger.info("Счетчик не появился, пробуем ждать кнопку получения награды (до 10 минут)");
+                Logger.info("Счетчик не появился, пробуем ждать кнопку получения награды");
                 return !waitForClaimButtonAndClick();
             }
 
             // Если ничего не нашли, просто ждем кнопку получения награды
             else {
-                Logger.info("Ни рекламы, ни кнопки закрытия не найдено. Ждем кнопку получения награды (до 10 минут)");
+                Logger.info("Ни рекламы, ни кнопки закрытия не найдено. Ждем кнопку получения награды");
                 return !waitForClaimButtonAndClick();
             }
 
